@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <title>Snoopy's Adventure - The Peanuts Platform Game</title>
+    <style>
+        /* ========================================================================
+           RESET E CONFIGURAÇÕES GLOBAIS
+        ======================================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @font-face {
+            font-family: 'ComicSans';
+            src: local('Comic Sans MS'), local('ComicSansMS'), local('Comic Sans');
+        }
+
+        :root {
+            /* Paleta Peanuts - Cores clássicas do Charlie Brown e turma */
+            --peanuts-yellow: #FFD700;
+            --charlie-brown-yellow: #FDD017;
+            --snoopy-white: #FFFFFF;
+            --snoopy-black: #000000;
+            --woodstock-yellow: #FFEB3B;
+            --lucy-blue: #4A90E2;
+            --linus-orange: #FF8C42;
+            --peppermint-red: #E63946;
+            --sally-pink: #FFB6C1;
+            --schroeder-purple: #9B59B6;
+            --pigpen-brown: #8B4513;
+            --sky-blue: #87CEEB;
+            --grass-green: #7EC850;
+            --cloud-white: #F0F8FF;
+            --dirt-brown: #8B7355;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(180deg, var(--sky-blue) 0%, #B0E0E6 100%);
+            font-family: 'ComicSans', 'Comic Sans MS', cursive, sans-serif;
+            touch-action: none;
+        }
+
+        /* ========================================================================
+           CONTAINER PRINCIPAL DO JOGO
+        ======================================================================== */
+        #gameContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--sky-blue);
+        }
+
+        /* ========================================================================
+           CANVAS - ÁREA DE RENDERIZAÇÃO
+        ======================================================================== */
+        #gameCanvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--sky-blue);
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            touch-action: none;
+        }
+
+        /* ========================================================================
+           HUD - INTERFACE DO USUÁRIO
+        ======================================================================== */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 1000;
+            pointer-events: none;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 
+                2px 2px 0 #000,
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000;
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+        }
+
+        .hud-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        /* ========================================================================
+           CONTROLES MOBILE - JOYSTICK VIRTUAL
+        ======================================================================== */
+        #mobileControls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .joystick-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            pointer-events: all;
+        }
+
+        .joystick-base {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.3) 100%);
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.4);
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.3),
+                0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .joystick-stick {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, var(--peanuts-yellow) 0%, var(--charlie-brown-yellow) 100%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: all 0.1s ease;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: all;
+        }
+
+        .action-button {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, var(--peppermint-red) 0%, #C41E3A 100%);
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.4);
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.4),
+                inset 0 -3px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            user-select: none;
+        }
+
+        .action-button:active {
+            transform: scale(0.9);
+            box-shadow: 
+                0 2px 8px rgba(0,0,0,0.4),
+                inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .action-button.jump {
+            background: radial-gradient(circle, var(--lucy-blue) 0%, #2E5F8A 100%);
+        }
+
+        /* ========================================================================
+           TELAS DE MENU E GAME OVER
+        ======================================================================== */
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+        }
+
+        .screen-content {
+            text-align: center;
+            color: white;
+            max-width: 90%;
+        }
+
+        .screen-title {
+            font-size: clamp(32px, 8vw, 64px);
+            margin-bottom: 20px;
+            color: var(--peanuts-yellow);
+            text-shadow: 
+                4px 4px 0 #000,
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000;
+            animation: titleBounce 2s ease-in-out infinite;
+        }
+
+        @keyframes titleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .screen-subtitle {
+            font-size: clamp(16px, 4vw, 24px);
+            margin-bottom: 30px;
+            color: var(--cloud-white);
+        }
+
+        .game-button {
+            background: linear-gradient(135deg, var(--peanuts-yellow) 0%, var(--charlie-brown-yellow) 100%);
+            color: var(--snoopy-black);
+            border: 4px solid var(--snoopy-black);
+            padding: 15px 40px;
+            font-size: clamp(18px, 4vw, 28px);
+            font-weight: bold;
+            font-family: 'ComicSans', cursive;
+            border-radius: 15px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .game-button:active {
+            transform: scale(0.95) translateY(2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+        }
+
+        .stats-display {
+            background: rgba(0,0,0,0.6);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 3px solid var(--peanuts-yellow);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: clamp(16px, 3.5vw, 22px);
+        }
+
+        /* ========================================================================
+           LOADING E ANIMAÇÕES
+        ======================================================================== */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--sky-blue) 0%, var(--lucy-blue) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255,255,255,0.3);
+            border-top-color: var(--peanuts-yellow);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* ========================================================================
+           RESPONSIVE ADJUSTMENTS
+        ======================================================================== */
+        @media (max-width: 768px) {
+            #hud {
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            .hud-icon {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .joystick-container {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .joystick-stick {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .action-button {
+                width: 60px;
+                height: 60px;
+                font-size: 20px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            #mobileControls {
+                height: 140px;
+            }
+            
+            .joystick-container {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .action-button {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ========================================================================
+         ESTRUTURA HTML DO JOGO
+    ======================================================================== -->
+    <div id="gameContainer">
+        <!-- Canvas principal -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD - Interface do jogador -->
+        <div id="hud">
+            <div class="hud-left">
+                <div class="hud-item">
+                    <span class="hud-icon">🏆</span>
+                    <span>PONTOS: <span id="scoreDisplay">0</span></span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">🦴</span>
+                    <span>OSSOS: <span id="bonesDisplay">0</span></span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <div class="hud-item">
+                    <span class="hud-icon">❤️</span>
+                    <span>VIDAS: <span id="livesDisplay">3</span></span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">⏱️</span>
+                    <span><span id="timerDisplay">300</span>s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles Mobile -->
+        <div id="mobileControls">
+            <div class="joystick-container">
+                <div class="joystick-base"></div>
+                <div class="joystick-stick" id="joystickStick"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button jump" id="jumpButton">↑</button>
+                <button class="action-button" id="runButton">⚡</button>
+            </div>
+        </div>
+
+        <!-- Tela de Loading -->
+        <div id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Carregando Aventura do Snoopy...</div>
+        </div>
+
+        <!-- Tela de Menu -->
+        <div id="menuScreen" class="screen-overlay">
+            <div class="screen-content">
+                <h1 class="screen-title">SNOOPY'S ADVENTURE</h1>
+                <p class="screen-subtitle">Uma Aventura dos Peanuts</p>
+                <button class="game-button" onclick="game.startGame()">INICIAR JOGO</button>
+                <p style="margin-top: 30px; font-size: 14px; color: rgba(255,255,255,0.7);">
+                    Use o joystick para mover<br>
+                    Botão azul para pular<br>
+                    Botão vermelho para correr
+                </p>
+            </div>
+        </div>
+
+        <!-- Tela de Pause -->
+        <div id="pauseScreen" class="screen-overlay">
+            <div class="screen-content">
+                <h1 class="screen-title">PAUSADO</h1>
+                <button class="game-button" onclick="game.resumeGame()">CONTINUAR</button>
+                <button class="game-button" onclick="game.returnToMenu()">MENU PRINCIPAL</button>
+            </div>
+        </div>
+
+        <!-- Tela de Game Over -->
+        <div id="gameOverScreen" class="screen-overlay">
+            <div class="screen-content">
+                <h1 class="screen-title">GAME OVER</h1>
+                <p class="screen-subtitle">Good Grief!</p>
+                <div class="stats-display">
+                    <div class="stat-row">
+                        <span>Pontuação Final:</span>
+                        <span id="finalScore">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Ossos Coletados:</span>
+                        <span id="finalBones">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Tempo Jogado:</span>
+                        <span id="finalTime">0s</span>
+                    </div>
+                </div>
+                <button class="game-button" onclick="game.restartGame()">JOGAR NOVAMENTE</button>
+                <button class="game-button" onclick="game.returnToMenu()">MENU PRINCIPAL</button>
+            </div>
+        </div>
+
+        <!-- Tela de Level Complete -->
+        <div id="levelCompleteScreen" class="screen-overlay">
+            <div class="screen-content">
+                <h1 class="screen-title">FASE COMPLETA!</h1>
+                <p class="screen-subtitle">🎉 Bom trabalho, Snoopy! 🎉</p>
+                <div class="stats-display">
+                    <div class="stat-row">
+                        <span>Bônus de Tempo:</span>
+                        <span id="timeBonus">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Bônus de Ossos:</span>
+                        <span id="boneBonus">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Total:</span>
+                        <span id="levelTotal">0</span>
+                    </div>
+                </div>
+                <button class="game-button" onclick="game.nextLevel()">PRÓXIMA FASE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================================
+    // CONFIGURAÇÕES GLOBAIS E CONSTANTES
+    // ============================================================================
+    
+    const CONFIG = {
+        // Configurações de Canvas
+        CANVAS_WIDTH: 800,
+        CANVAS_HEIGHT: 600,
+        
+        // Física do jogo
+        GRAVITY: 0.6,
+        FRICTION: 0.85,
+        
+        // Configurações do jogador (Snoopy)
+        PLAYER: {
+            WIDTH: 32,
+            HEIGHT: 40,
+            WALK_SPEED: 3,
+            RUN_SPEED: 5,
+            JUMP_POWER: 12,
+            MAX_FALL_SPEED: 15,
+            ACCELERATION: 0.5,
+            ANIMATION_SPEED: 8
+        },
+        
+        // Configurações de tile (blocos do mapa)
+        TILE_SIZE: 32,
+        
+        // Configurações de câmera
+        CAMERA: {
+            DEADZONE_X: 200,
+            DEADZONE_Y: 150,
+            SMOOTHNESS: 0.1
+        },
+        
+        // Sistema de partículas
+        PARTICLE_POOL_SIZE: 100,
+        
+        // FPS alvo
+        TARGET_FPS: 60,
+        FRAME_TIME: 1000 / 60
+    };
+
+    // ============================================================================
+    // CLASSE PRINCIPAL DO JOGO - GAME ENGINE
+    // ============================================================================
+    
+    class Game {
+        constructor() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            
+            // Estado do jogo
+            this.state = 'loading'; // loading, menu, playing, paused, gameover, levelcomplete
+            this.currentLevel = 1;
+            this.score = 0;
+            this.bones = 0;
+            this.lives = 3;
+            this.timeLeft = 300;
+            this.timeElapsed = 0;
+            
+            // Sistema de input
+            this.input = new InputManager();
+            
+            // Entidades do jogo
+            this.player = null;
+            this.camera = null;
+            this.level = null;
+            this.entities = [];
+            this.particles = [];
+            
+            // Pools de objetos para performance
+            this.particlePool = [];
+            this.enemyPool = [];
+            
+            // Sistema de física e colisões
+            this.collisionSystem = new CollisionSystem();
+            
+            // Sistema de animação
+            this.animationSystem = new AnimationSystem();
+            
+            // Sistema de áudio (preparado para sons)
+            this.audioManager = new AudioManager();
+            
+            // Timers
+            this.lastTime = 0;
+            this.deltaTime = 0;
+            this.fpsAccumulator = 0;
+            this.fpsFrames = 0;
+            this.currentFPS = 60;
+            
+            // Flags de controle
+            this.isPaused = false;
+            this.isRunning = false;
+            
+            this.init();
+        }
+
+        init() {
+            this.setupCanvas();
+            this.createPools();
+            this.loadAssets();
+        }
+
+        setupCanvas() {
+            const scale = Math.min(
+                window.innerWidth / CONFIG.CANVAS_WIDTH,
+                window.innerHeight / CONFIG.CANVAS_HEIGHT
+            );
+            
+            this.canvas.width = CONFIG.CANVAS_WIDTH;
+            this.canvas.height = CONFIG.CANVAS_HEIGHT;
+            this.canvas.style.width = `${CONFIG.CANVAS_WIDTH * scale}px`;
+            this.canvas.style.height = `${CONFIG.CANVAS_HEIGHT * scale}px`;
+            
+            // Desabilitar suavização para pixel art
+            this.ctx.imageSmoothingEnabled = false;
+        }
+
+        createPools() {
+            // Pool de partículas para otimização
+            for (let i = 0; i < CONFIG.PARTICLE_POOL_SIZE; i++) {
+                this.particlePool.push(new Particle());
+            }
+        }
+
+        loadAssets() {
+            // Simular carregamento de assets
+            setTimeout(() => {
+                this.hideLoading();
+                this.showMenu();
+            }, 1500);
+        }
+
+        hideLoading() {
+            document.getElementById('loadingScreen').style.display = 'none';
+        }
+
+        showMenu() {
+            this.state = 'menu';
+            document.getElementById('menuScreen').style.display = 'flex';
+        }
+
+        startGame() {
+            document.getElementById('menuScreen').style.display = 'none';
+            this.state = 'playing';
+            this.resetGame();
+            this.initLevel(this.currentLevel);
+            this.start();
+        }
+
+        resetGame() {
+            this.score = 0;
+            this.bones = 0;
+            this.lives = 3;
+            this.timeLeft = 300;
+            this.timeElapsed = 0;
+            this.currentLevel = 1;
+            this.updateHUD();
+        }
+
+        initLevel(levelNumber) {
+            // Limpar entidades anteriores
+            this.entities = [];
+            this.particles = [];
+            
+            // Criar novo nível
+            this.level = new Level(levelNumber);
+            
+            // Criar jogador (Snoopy)
+            this.player = new Player(100, 100);
+            
+            // Criar câmera
+            this.camera = new Camera(this.player);
+            
+            // Popular o nível com inimigos e itens
+            this.populateLevel();
+            
+            // Resetar timer
+            this.timeLeft = 300;
+        }
+
+        populateLevel() {
+            const levelData = this.level.getData();
+            
+            // Processar cada tile do mapa
+            for (let y = 0; y < levelData.height; y++) {
+                for (let x = 0; x < levelData.width; x++) {
+                    const tileType = levelData.tiles[y][x];
+                    const worldX = x * CONFIG.TILE_SIZE;
+                    const worldY = y * CONFIG.TILE_SIZE;
+                    
+                    // Criar entidades baseadas no tipo de tile
+                    switch(tileType) {
+                        case 'E': // Enemy - Lucy (perseguidora)
+                            this.entities.push(new Lucy(worldX, worldY));
+                            break;
+                        case 'W': // Woodstock (amigo voador)
+                            this.entities.push(new Woodstock(worldX, worldY));
+                            break;
+                        case 'C': // Charlie Brown (patrulheiro)
+                            this.entities.push(new CharlieBrown(worldX, worldY));
+                            break;
+                        case 'B': // Bone (osso colecionável)
+                            this.entities.push(new Bone(worldX, worldY));
+                            break;
+                        case 'D': // Dog House (power-up)
+                            this.entities.push(new DogHouse(worldX, worldY));
+                            break;
+                        case 'K': // Kite (pontos extras - referência ao Charlie Brown)
+                            this.entities.push(new Kite(worldX, worldY));
+                            break;
+                        case 'P': // Piano (referência ao Schroeder)
+                            this.entities.push(new Piano(worldX, worldY));
+                            break;
+                        case 'S': // Security Blanket (referência ao Linus - invencibilidade temporária)
+                            this.entities.push(new SecurityBlanket(worldX, worldY));
+                            break;
+                    }
+                }
+            }
+        }
+
+        start() {
+            this.isRunning = true;
+            this.lastTime = performance.now();
+            this.gameLoop();
+        }
+
+        gameLoop(currentTime = 0) {
+            if (!this.isRunning) return;
+            
+            // Calcular delta time
+            this.deltaTime = (currentTime - this.lastTime) / 1000;
+            this.lastTime = currentTime;
+            
+            // Limitar delta time para evitar grandes saltos
+            if (this.deltaTime > 0.1) this.deltaTime = 0.1;
+            
+            // Calcular FPS
+            this.fpsAccumulator += this.deltaTime;
+            this.fpsFrames++;
+            if (this.fpsAccumulator >= 1) {
+                this.currentFPS = this.fpsFrames;
+                this.fpsFrames = 0;
+                this.fpsAccumulator = 0;
+            }
+            
+            // Update e Render
+            if (this.state === 'playing' && !this.isPaused) {
+                this.update(this.deltaTime);
+                this.render();
+            }
+            
+            requestAnimationFrame((time) => this.gameLoop(time));
+        }
+
+        update(dt) {
+            // Atualizar timer
+            this.timeElapsed += dt;
+            this.timeLeft = Math.max(0, 300 - Math.floor(this.timeElapsed));
+            
+            if (this.timeLeft === 0) {
+                this.loseLife();
+            }
+            
+            // Atualizar input
+            this.input.update();
+            
+            // Atualizar jogador
+            this.player.update(dt, this.input, this.level, this.collisionSystem);
+            
+            // Atualizar câmera
+            this.camera.update(dt);
+            
+            // Atualizar todas as entidades
+            for (let i = this.entities.length - 1; i >= 0; i--) {
+                const entity = this.entities[i];
+                entity.update(dt, this.player, this.level);
+                
+                // Remover entidades marcadas para remoção
+                if (entity.shouldRemove) {
+                    this.entities.splice(i, 1);
+                }
+                
+                // Checar colisões com jogador
+                if (entity.active && this.collisionSystem.checkCollision(this.player, entity)) {
+                    this.handleEntityCollision(entity);
+                }
+            }
+            
+            // Atualizar partículas
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                this.particles[i].update(dt);
+                if (this.particles[i].isDead()) {
+                    this.particles.splice(i, 1);
+                }
+            }
+            
+            // Checar condições de vitória/derrota
+            this.checkLevelConditions();
+            
+            // Atualizar HUD
+            this.updateHUD();
+        }
+
+        render() {
+            // Limpar tela
+            this.ctx.fillStyle = '#87CEEB';
+            this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+            
+            // Aplicar transformação da câmera
+            this.ctx.save();
+            this.camera.apply(this.ctx);
+            
+            // Renderizar background (nuvens, céu)
+            this.renderBackground();
+            
+            // Renderizar nível (tiles)
+            this.level.render(this.ctx, this.camera);
+            
+            // Renderizar entidades (inimigos, itens)
+            this.entities.forEach(entity => entity.render(this.ctx));
+            
+            // Renderizar partículas
+            this.particles.forEach(particle => particle.render(this.ctx));
+            
+            // Renderizar jogador
+            this.player.render(this.ctx);
+            
+            // Remover transformação da câmera
+            this.ctx.restore();
+            
+            // Renderizar elementos de UI (já em coordenadas de tela)
+            this.renderUI();
+        }
+
+        renderBackground() {
+            // Desenhar nuvens com parallax
+            const cloudOffset = this.camera.x * 0.3;
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.globalAlpha = 0.7;
+            
+            // Nuvem 1
+            this.drawCloud(-cloudOffset + 100, 50, 80);
+            this.drawCloud(-cloudOffset + 400, 100, 100);
+            this.drawCloud(-cloudOffset + 700, 70, 90);
+            this.drawCloud(-cloudOffset + 1000, 120, 85);
+            
+            this.ctx.globalAlpha = 1.0;
+        }
+
+        drawCloud(x, y, size) {
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+            this.ctx.arc(x + size * 0.4, y, size * 0.4, 0, Math.PI * 2);
+            this.ctx.arc(x - size * 0.4, y, size * 0.4, 0, Math.PI * 2);
+            this.ctx.arc(x, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
+        renderUI() {
+            // Debug info (opcional)
+            if (false) { // Mudar para true para ver debug info
+                this.ctx.fillStyle = 'black';
+                this.ctx.font = '12px monospace';
+                this.ctx.fillText(`FPS: ${this.currentFPS}`, 10, CONFIG.CANVAS_HEIGHT - 30);
+                this.ctx.fillText(`Entities: ${this.entities.length}`, 10, CONFIG.CANVAS_HEIGHT - 15);
+            }
+        }
+
+        handleEntityCollision(entity) {
+            if (entity instanceof Bone) {
+                this.collectBone(entity);
+            } else if (entity instanceof DogHouse) {
+                this.collectPowerUp(entity);
+            } else if (entity instanceof Kite) {
+                this.collectKite(entity);
+            } else if (entity instanceof Piano) {
+                this.collectPiano(entity);
+            } else if (entity instanceof SecurityBlanket) {
+                this.collectBlanket(entity);
+            } else if (entity instanceof Lucy || entity instanceof CharlieBrown) {
+                if (this.player.velocityY > 0 && this.player.y + this.player.height < entity.y + entity.height / 2) {
+                    // Pular em cima do inimigo
+                    this.defeatEnemy(entity);
+                    this.player.velocityY = -8;
+                } else if (!this.player.invincible) {
+                    this.hitByEnemy();
+                }
+            }
+        }
+
+        collectBone(bone) {
+            this.bones++;
+            this.score += 100;
+            bone.shouldRemove = true;
+            this.createCollectParticles(bone.x + bone.width/2, bone.y + bone.height/2, '#FFFFFF');
+            this.audioManager.playSound('collect');
+        }
+
+        collectPowerUp(powerup) {
+            this.player.activatePowerUp('invincibility', 10);
+            this.score += 500;
+            powerup.shouldRemove = true;
+            this.createCollectParticles(powerup.x + powerup.width/2, powerup.y + powerup.height/2, '#FF0000');
+            this.audioManager.playSound('powerup');
+        }
+
+        collectKite(kite) {
+            this.score += 200;
+            kite.shouldRemove = true;
+            this.createCollectParticles(kite.x + kite.width/2, kite.y + kite.height/2, '#FF69B4');
+            this.audioManager.playSound('collect');
+        }
+
+        collectPiano(piano) {
+            this.score += 300;
+            piano.shouldRemove = true;
+            this.createCollectParticles(piano.x + piano.width/2, piano.y + piano.height/2, '#8B4513');
+            this.audioManager.playSound('piano');
+        }
+
+        collectBlanket(blanket) {
+            this.player.activatePowerUp('invincibility', 15);
+            this.score += 1000;
+            blanket.shouldRemove = true;
+            this.createCollectParticles(blanket.x + blanket.width/2, blanket.y + blanket.height/2, '#4A90E2');
+            this.audioManager.playSound('powerup');
+        }
+
+        defeatEnemy(enemy) {
+            this.score += 200;
+            enemy.shouldRemove = true;
+            this.createExplosionParticles(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+            this.audioManager.playSound('defeat');
+        }
+
+        hitByEnemy() {
+            this.loseLife();
+        }
+
+        loseLife() {
+            if (this.player.invincible) return;
+            
+            this.lives--;
+            
+            if (this.lives <= 0) {
+                this.gameOver();
+            } else {
+                this.player.activatePowerUp('invincibility', 3);
+                this.player.x = 100;
+                this.player.y = 100;
+                this.player.velocityX = 0;
+                this.player.velocityY = 0;
+            }
+        }
+
+        createCollectParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                const particle = this.getParticleFromPool();
+                if (particle) {
+                    particle.init(
+                        x, y,
+                        (Math.random() - 0.5) * 5,
+                        (Math.random() - 0.5) * 5,
+                        color,
+                        0.5
+                    );
+                    this.particles.push(particle);
+                }
+            }
+        }
+
+        createExplosionParticles(x, y) {
+            for (let i = 0; i < 20; i++) {
+                const particle = this.getParticleFromPool();
+                if (particle) {
+                    const angle = (Math.PI * 2 * i) / 20;
+                    const speed = 3 + Math.random() * 2;
+                    particle.init(
+                        x, y,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        Math.random() > 0.5 ? '#FFD700' : '#FF6B6B',
+                        1.0
+                    );
+                    this.particles.push(particle);
+                }
+            }
+        }
+
+        getParticleFromPool() {
+            if (this.particlePool.length > 0) {
+                return this.particlePool.pop();
+            }
+            return new Particle();
+        }
+
+        returnParticleToPool(particle) {
+            this.particlePool.push(particle);
+        }
+
+        checkLevelConditions() {
+            // Checar se chegou ao final do nível
+            if (this.player.x > this.level.width * CONFIG.TILE_SIZE - 100) {
+                this.completeLevel();
+            }
+        }
+
+        completeLevel() {
+            this.state = 'levelcomplete';
+            this.isPaused = true;
+            
+            // Calcular bônus
+            const timeBonus = this.timeLeft * 10;
+            const boneBonus = this.bones * 50;
+            const totalBonus = timeBonus + boneBonus;
+            
+            document.getElementById('timeBonus').textContent = timeBonus;
+            document.getElementById('boneBonus').textContent = boneBonus;
+            document.getElementById('levelTotal').textContent = totalBonus;
+            
+            this.score += totalBonus;
+            
+            document.getElementById('levelCompleteScreen').style.display = 'flex';
+        }
+
+        nextLevel() {
+            document.getElementById('levelCompleteScreen').style.display = 'none';
+            this.currentLevel++;
+            this.isPaused = false;
+            this.state = 'playing';
+            this.initLevel(this.currentLevel);
+        }
+
+        gameOver() {
+            this.state = 'gameover';
+            this.isPaused = true;
+            
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('finalBones').textContent = this.bones;
+            document.getElementById('finalTime').textContent = Math.floor(this.timeElapsed);
+            
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+
+        pauseGame() {
+            if (this.state === 'playing') {
+                this.isPaused = true;
+                document.getElementById('pauseScreen').style.display = 'flex';
+            }
+        }
+
+        resumeGame() {
+            this.isPaused = false;
+            document.getElementById('pauseScreen').style.display = 'none';
+        }
+
+        restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            this.resetGame();
+            this.initLevel(1);
+            this.state = 'playing';
+            this.isPaused = false;
+        }
+
+        returnToMenu() {
+            document.getElementById('pauseScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            this.state = 'menu';
+            this.isPaused = true;
+            this.showMenu();
+        }
+
+        updateHUD() {
+            document.getElementById('scoreDisplay').textContent = this.score;
+            document.getElementById('bonesDisplay').textContent = this.bones;
+            document.getElementById('livesDisplay').textContent = this.lives;
+            document.getElementById('timerDisplay').textContent = this.timeLeft;
+        }
+    }
+
+    // ============================================================================
+    // CLASSE DO JOGADOR - SNOOPY
+    // ============================================================================
+    
+    class Player {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.width = CONFIG.PLAYER.WIDTH;
+            this.height = CONFIG.PLAYER.HEIGHT;
+            
+            this.velocityX = 0;
+            this.velocityY = 0;
+            
+            this.onGround = false;
+            this.jumping = false;
+            this.running = false;
+            this.facingRight = true;
+            
+            this.invincible = false;
+            this.invincibleTimer = 0;
+            
+            // Sistema de animação
+            this.animationFrame = 0;
+            this.animationTimer = 0;
+            this.currentAnimation = 'idle';
+            
+            // Hitbox
+            this.hitboxOffsetX = 4;
+            this.hitboxOffsetY = 0;
+            this.hitboxWidth = this.width - 8;
+            this.hitboxHeight = this.height;
+        }
+
+        update(dt, input, level, collisionSystem) {
+            // Atualizar timers de power-ups
+            if (this.invincible) {
+                this.invincibleTimer -= dt;
+                if (this.invincibleTimer <= 0) {
+                    this.invincible = false;
+                }
+            }
+            
+            // Processar input horizontal
+            const moveSpeed = this.running ? CONFIG.PLAYER.RUN_SPEED : CONFIG.PLAYER.WALK_SPEED;
+            
+            if (input.left) {
+                this.velocityX -= CONFIG.PLAYER.ACCELERATION;
+                this.velocityX = Math.max(this.velocityX, -moveSpeed);
+                this.facingRight = false;
+                this.currentAnimation = this.running ? 'run' : 'walk';
+            } else if (input.right) {
+                this.velocityX += CONFIG.PLAYER.ACCELERATION;
+                this.velocityX = Math.min(this.velocityX, moveSpeed);
+                this.facingRight = true;
+                this.currentAnimation = this.running ? 'run' : 'walk';
+            } else {
+                this.velocityX *= CONFIG.FRICTION;
+                if (Math.abs(this.velocityX) < 0.1) {
+                    this.velocityX = 0;
+                    this.currentAnimation = 'idle';
+                }
+            }
+            
+            // Processar pulo
+            if (input.jump && this.onGround && !this.jumping) {
+                this.velocityY = -CONFIG.PLAYER.JUMP_POWER;
+                this.jumping = true;
+                this.onGround = false;
+                this.currentAnimation = 'jump';
+            }
+            
+            if (!input.jump && this.jumping && this.velocityY < 0) {
+                this.velocityY *= 0.5; // Pulo variável
+            }
+            
+            if (!this.onGround) {
+                this.currentAnimation = this.velocityY < 0 ? 'jump' : 'fall';
+            }
+            
+            // Aplicar gravidade
+            this.velocityY += CONFIG.GRAVITY;
+            this.velocityY = Math.min(this.velocityY, CONFIG.PLAYER.MAX_FALL_SPEED);
+            
+            // Atualizar posição com verificação de colisão
+            this.updatePosition(dt, level, collisionSystem);
+            
+            // Atualizar animação
+            this.updateAnimation(dt);
+            
+            // Atualizar flag de run
+            this.running = input.run;
+        }
+
+        updatePosition(dt, level, collisionSystem) {
+            // Movimento horizontal com colisão
+            this.x += this.velocityX;
+            
+            const horizontalCollisions = collisionSystem.getTileCollisions(
+                this.x + this.hitboxOffsetX,
+                this.y + this.hitboxOffsetY,
+                this.hitboxWidth,
+                this.hitboxHeight,
+                level
+            );
+            
+            if (horizontalCollisions.left || horizontalCollisions.right) {
+                this.x -= this.velocityX;
+                this.velocityX = 0;
+            }
+            
+            // Movimento vertical com colisão
+            this.y += this.velocityY;
+            
+            const verticalCollisions = collisionSystem.getTileCollisions(
+                this.x + this.hitboxOffsetX,
+                this.y + this.hitboxOffsetY,
+                this.hitboxWidth,
+                this.hitboxHeight,
+                level
+            );
+            
+            if (verticalCollisions.bottom) {
+                this.y = Math.floor(this.y / CONFIG.TILE_SIZE) * CONFIG.TILE_SIZE;
+                this.velocityY = 0;
+                this.onGround = true;
+                this.jumping = false;
+            } else {
+                this.onGround = false;
+            }
+            
+            if (verticalCollisions.top) {
+                this.y = Math.ceil(this.y / CONFIG.TILE_SIZE) * CONFIG.TILE_SIZE;
+                this.velocityY = 0;
+            }
+            
+            // Limites do mundo
+            this.x = Math.max(0, Math.min(this.x, level.width * CONFIG.TILE_SIZE - this.width));
+        }
+
+        updateAnimation(dt) {
+            this.animationTimer += dt;
+            if (this.animationTimer >= 1 / CONFIG.PLAYER.ANIMATION_SPEED) {
+                this.animationTimer = 0;
+                this.animationFrame = (this.animationFrame + 1) % 4;
+            }
+        }
+
+        activatePowerUp(type, duration) {
+            if (type === 'invincibility') {
+                this.invincible = true;
+                this.invincibleTimer = duration;
+            }
+        }
+
+        render(ctx) {
+            ctx.save();
+            
+            // Efeito de invencibilidade (piscar)
+            if (this.invincible && Math.floor(this.invincibleTimer * 10) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+            
+            // Flip horizontal se necessário
+            if (!this.facingRight) {
+                ctx.translate(this.x + this.width, this.y);
+                ctx.scale(-1, 1);
+            } else {
+                ctx.translate(this.x, this.y);
+            }
+            
+            // Desenhar Snoopy (versão simplificada pixel art)
+            this.drawSnoopy(ctx);
+            
+            ctx.restore();
+            
+            // Debug hitbox (opcional)
+            if (false) {
+                ctx.strokeStyle = 'red';
+                ctx.strokeRect(
+                    this.x + this.hitboxOffsetX,
+                    this.y + this.hitboxOffsetY,
+                    this.hitboxWidth,
+                    this.hitboxHeight
+                );
+            }
+        }
+
+        drawSnoopy(ctx) {
+            // Corpo branco do Snoopy
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(6, 12, 20, 24);
+            
+            // Orelhas pretas
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(8, 8, 6, 8);
+            ctx.fillRect(18, 8, 6, 8);
+            
+            // Cabeça
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(16, 14, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Focinho preto
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(20, 14, 6, 4);
+            
+            // Nariz
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(26, 16, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Olho
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(14, 12, 3, 2);
+            
+            // Patas
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(10, 32, 4, 6);
+            ctx.fillRect(18, 32, 4, 6);
+            
+            // Coleira vermelha
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(8, 20, 16, 3);
+            
+            // Tag da coleira (medalha dourada)
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(16, 22, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Rabo (animação sutil)
+            const tailWag = Math.sin(Date.now() / 100) * 2;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(2, 16 + tailWag, 6, 3);
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE CÂMERA
+    // ============================================================================
+    
+    class Camera {
+        constructor(target) {
+            this.x = 0;
+            this.y = 0;
+            this.target = target;
+            this.width = CONFIG.CANVAS_WIDTH;
+            this.height = CONFIG.CANVAS_HEIGHT;
+        }
+
+        update(dt) {
+            // Smooth camera follow com deadzone
+            const targetX = this.target.x - this.width / 2 + this.target.width / 2;
+            const targetY = this.target.y - this.height / 2 + this.target.height / 2;
+            
+            this.x += (targetX - this.x) * CONFIG.CAMERA.SMOOTHNESS;
+            this.y += (targetY - this.y) * CONFIG.CAMERA.SMOOTHNESS;
+            
+            // Limitar câmera aos limites do nível
+            // (será implementado quando tivermos o tamanho do nível)
+        }
+
+        apply(ctx) {
+            ctx.translate(-Math.floor(this.x), -Math.floor(this.y));
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE COLISÃO
+    // ============================================================================
+    
+    class CollisionSystem {
+        checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        getTileCollisions(x, y, width, height, level) {
+            const collisions = {
+                top: false,
+                bottom: false,
+                left: false,
+                right: false
+            };
+            
+            const startTileX = Math.floor(x / CONFIG.TILE_SIZE);
+            const endTileX = Math.floor((x + width) / CONFIG.TILE_SIZE);
+            const startTileY = Math.floor(y / CONFIG.TILE_SIZE);
+            const endTileY = Math.floor((y + height) / CONFIG.TILE_SIZE);
+            
+            for (let ty = startTileY; ty <= endTileY; ty++) {
+                for (let tx = startTileX; tx <= endTileX; tx++) {
+                    if (level.isSolidTile(tx, ty)) {
+                        const tileX = tx * CONFIG.TILE_SIZE;
+                        const tileY = ty * CONFIG.TILE_SIZE;
+                        
+                        // Determinar lado da colisão
+                        const overlapLeft = (x + width) - tileX;
+                        const overlapRight = (tileX + CONFIG.TILE_SIZE) - x;
+                        const overlapTop = (y + height) - tileY;
+                        const overlapBottom = (tileY + CONFIG.TILE_SIZE) - y;
+                        
+                        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                        
+                        if (minOverlap === overlapLeft) collisions.right = true;
+                        if (minOverlap === overlapRight) collisions.left = true;
+                        if (minOverlap === overlapTop) collisions.bottom = true;
+                        if (minOverlap === overlapBottom) collisions.top = true;
+                    }
+                }
+            }
+            
+            return collisions;
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE NÍVEL (LEVEL/MAP)
+    // ============================================================================
+    
+    class Level {
+        constructor(levelNumber) {
+            this.levelNumber = levelNumber;
+            this.width = 0;
+            this.height = 0;
+            this.tiles = [];
+            
+            this.generateLevel();
+        }
+
+        generateLevel() {
+            // Gerar nível procedural baseado no número da fase
+            // Cada nível fica progressivamente mais difícil
+            
+            this.width = 100 + (this.levelNumber * 20);
+            this.height = 20;
+            
+            // Inicializar array 2D
+            this.tiles = [];
+            for (let y = 0; y < this.height; y++) {
+                this.tiles[y] = [];
+                for (let x = 0; x < this.width; x++) {
+                    this.tiles[y][x] = 0; // 0 = vazio
+                }
+            }
+            
+            // Criar chão
+            for (let x = 0; x < this.width; x++) {
+                this.tiles[this.height - 1][x] = 1; // Grama
+                this.tiles[this.height - 2][x] = 2; // Terra
+            }
+            
+            // Adicionar plataformas
+            this.addPlatforms();
+            
+            // Adicionar buracos (desafio)
+            this.addHoles();
+            
+            // Adicionar escadas e estruturas
+            this.addStructures();
+        }
+
+        addPlatforms() {
+            const platformCount = 10 + this.levelNumber * 2;
+            
+            for (let i = 0; i < platformCount; i++) {
+                const x = Math.floor(Math.random() * (this.width - 10)) + 5;
+                const y = Math.floor(Math.random() * (this.height - 8)) + 4;
+                const length = Math.floor(Math.random() * 5) + 3;
+                
+                for (let px = 0; px < length; px++) {
+                    if (x + px < this.width) {
+                        this.tiles[y][x + px] = 1;
+                    }
+                }
+            }
+        }
+
+        addHoles() {
+            const holeCount = 3 + this.levelNumber;
+            
+            for (let i = 0; i < holeCount; i++) {
+                const x = Math.floor(Math.random() * (this.width - 10)) + 20;
+                const width = Math.floor(Math.random() * 3) + 2;
+                
+                for (let hx = 0; hx < width; hx++) {
+                    if (x + hx < this.width - 10) {
+                        this.tiles[this.height - 1][x + hx] = 0;
+                        this.tiles[this.height - 2][x + hx] = 0;
+                    }
+                }
+            }
+        }
+
+        addStructures() {
+            // Adicionar "casas" e estruturas temáticas dos Peanuts
+            const structureCount = 5 + this.levelNumber;
+            
+            for (let i = 0; i < structureCount; i++) {
+                const x = Math.floor(Math.random() * (this.width - 15)) + 10;
+                const y = this.height - 5;
+                
+                // Casa simples (referência à casinha do Snoopy)
+                if (Math.random() > 0.5) {
+                    // Base
+                    for (let bx = 0; bx < 4; bx++) {
+                        this.tiles[y][x + bx] = 3; // Bloco especial
+                    }
+                    // Teto
+                    this.tiles[y - 1][x + 1] = 3;
+                    this.tiles[y - 1][x + 2] = 3;
+                }
+            }
+        }
+
+        isSolidTile(x, y) {
+            if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                return false;
+            }
+            return this.tiles[y][x] > 0;
+        }
+
+        getTile(x, y) {
+            if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                return 0;
+            }
+            return this.tiles[y][x];
+        }
+
+        getData() {
+            return {
+                width: this.width,
+                height: this.height,
+                tiles: this.tiles
+            };
+        }
+
+        render(ctx, camera) {
+            // Calcular quais tiles são visíveis na câmera
+            const startX = Math.floor(camera.x / CONFIG.TILE_SIZE);
+            const endX = Math.ceil((camera.x + camera.width) / CONFIG.TILE_SIZE);
+            const startY = Math.floor(camera.y / CONFIG.TILE_SIZE);
+            const endY = Math.ceil((camera.y + camera.height) / CONFIG.TILE_SIZE);
+            
+            for (let y = Math.max(0, startY); y < Math.min(this.height, endY); y++) {
+                for (let x = Math.max(0, startX); x < Math.min(this.width, endX); x++) {
+                    const tile = this.tiles[y][x];
+                    if (tile > 0) {
+                        this.renderTile(ctx, tile, x * CONFIG.TILE_SIZE, y * CONFIG.TILE_SIZE);
+                    }
+                }
+            }
+        }
+
+        renderTile(ctx, type, x, y) {
+            switch(type) {
+                case 1: // Grama
+                    ctx.fillStyle = '#7EC850';
+                    ctx.fillRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                    // Textura de grama
+                    ctx.fillStyle = '#6AB83F';
+                    for (let i = 0; i < 5; i++) {
+                        ctx.fillRect(x + i * 6, y, 2, 4);
+                    }
+                    break;
+                case 2: // Terra
+                    ctx.fillStyle = '#8B7355';
+                    ctx.fillRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                    // Textura de terra
+                    ctx.fillStyle = '#6B5945';
+                    ctx.fillRect(x + 4, y + 4, 3, 3);
+                    ctx.fillRect(x + 20, y + 12, 3, 3);
+                    ctx.fillRect(x + 12, y + 20, 3, 3);
+                    break;
+                case 3: // Bloco especial (madeira)
+                    ctx.fillStyle = '#D2691E';
+                    ctx.fillRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                    // Textura de madeira
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(x + 2, y + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 1, y + 1, CONFIG.TILE_SIZE - 2, CONFIG.TILE_SIZE - 2);
+                    break;
+            }
+            
+            // Borda dos tiles
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+        }
+    }
+
+    // ============================================================================
+    // ENTIDADES BASE
+    // ============================================================================
+    
+    class Entity {
+        constructor(x, y, width, height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.velocityX = 0;
+            this.velocityY = 0;
+            this.active = true;
+            this.shouldRemove = false;
+        }
+
+        update(dt, player, level) {
+            // Override em subclasses
+        }
+
+        render(ctx) {
+            // Override em subclasses
+        }
+    }
+
+    // ============================================================================
+    // INIMIGOS
+    // ============================================================================
+    
+    class Lucy extends Entity {
+        constructor(x, y) {
+            super(x, y, 28, 36);
+            this.direction = 1;
+            this.speed = 1.5;
+            this.aggroRange = 150;
+            this.chasing = false;
+        }
+
+        update(dt, player, level) {
+            const distToPlayer = Math.abs(player.x - this.x);
+            
+            if (distToPlayer < this.aggroRange) {
+                this.chasing = true;
+                this.direction = player.x > this.x ? 1 : -1;
+            } else {
+                this.chasing = false;
+            }
+            
+            this.velocityX = this.direction * (this.chasing ? this.speed * 1.5 : this.speed);
+            this.x += this.velocityX;
+            
+            // Virar nas bordas ou obstáculos
+            if (this.x < 0 || this.x > level.width * CONFIG.TILE_SIZE - this.width) {
+                this.direction *= -1;
+            }
+        }
+
+        render(ctx) {
+            // Desenhar Lucy (versão pixel art)
+            ctx.fillStyle = '#4A90E2'; // Vestido azul
+            ctx.fillRect(this.x + 6, this.y + 14, 16, 18);
+            
+            // Cabeça
+            ctx.fillStyle = '#FFD0A8';
+            ctx.beginPath();
+            ctx.arc(this.x + 14, this.y + 10, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cabelo preto
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 8, this.y + 4, 12, 8);
+            
+            // Olhos (sempre irritados - característico da Lucy)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 10, this.y + 10, 2, 2);
+            ctx.fillRect(this.x + 16, this.y + 10, 2, 2);
+            
+            // Boca (carrancuda)
+            ctx.fillRect(this.x + 12, this.y + 14, 4, 1);
+        }
+    }
+
+    class CharlieBrown extends Entity {
+        constructor(x, y) {
+            super(x, y, 28, 36);
+            this.direction = 1;
+            this.speed = 1;
+            this.patrolDistance = 100;
+            this.startX = x;
+        }
+
+        update(dt, player, level) {
+            this.velocityX = this.direction * this.speed;
+            this.x += this.velocityX;
+            
+            // Patrulha em uma área
+            if (Math.abs(this.x - this.startX) > this.patrolDistance) {
+                this.direction *= -1;
+            }
+        }
+
+        render(ctx) {
+            // Desenhar Charlie Brown
+            // Camisa amarela com zigue-zague
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(this.x + 6, this.y + 14, 16, 18);
+            
+            // Zigue-zague preto
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 8, this.y + 20, 12, 2);
+            
+            // Cabeça
+            ctx.fillStyle = '#FFD0A8';
+            ctx.beginPath();
+            ctx.arc(this.x + 14, this.y + 10, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cabelo (apenas um fio - icônico!)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 13, this.y + 2, 2, 4);
+            
+            // Olhos
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 10, this.y + 10, 2, 2);
+            ctx.fillRect(this.x + 16, this.y + 10, 2, 2);
+            
+            // Boca (geralmente triste)
+            ctx.beginPath();
+            ctx.arc(this.x + 14, this.y + 16, 3, 0, Math.PI);
+            ctx.stroke();
+        }
+    }
+
+    class Woodstock extends Entity {
+        constructor(x, y) {
+            super(x, y, 16, 16);
+            this.floatOffset = 0;
+            this.floatSpeed = 2;
+        }
+
+        update(dt, player, level) {
+            this.floatOffset += dt * this.floatSpeed;
+            this.y += Math.sin(this.floatOffset) * 0.5;
+            
+            // Movimento horizontal suave
+            this.x += Math.cos(this.floatOffset * 0.5) * 0.3;
+        }
+
+        render(ctx) {
+            // Desenhar Woodstock (passarinho amarelo)
+            ctx.fillStyle = '#FFEB3B';
+            
+            // Corpo
+            ctx.beginPath();
+            ctx.arc(this.x + 8, this.y + 8, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bico
+            ctx.fillStyle = '#FF8C00';
+            ctx.fillRect(this.x + 12, this.y + 8, 3, 2);
+            
+            // Olho
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 8, this.y + 6, 2, 2);
+            
+            // Penas da cabeça
+            ctx.fillStyle = '#FFEB3B';
+            ctx.fillRect(this.x + 6, this.y + 2, 2, 4);
+            ctx.fillRect(this.x + 8, this.y + 1, 2, 3);
+        }
+    }
+
+    // ============================================================================
+    // COLECIONÁVEIS
+    // ============================================================================
+    
+    class Bone extends Entity {
+        constructor(x, y) {
+            super(x, y, 20, 12);
+            this.bobOffset = 0;
+            this.collected = false;
+        }
+
+        update(dt, player, level) {
+            if (!this.collected) {
+                this.bobOffset += dt * 3;
+                this.y += Math.sin(this.bobOffset) * 0.3;
+            }
+        }
+
+        render(ctx) {
+            if (this.collected) return;
+            
+            ctx.fillStyle = '#FFFFFF';
+            
+            // Desenhar osso
+            ctx.fillRect(this.x + 6, this.y + 4, 8, 4);
+            
+            // Extremidades
+            ctx.beginPath();
+            ctx.arc(this.x + 4, this.y + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(this.x + 16, this.y + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Brilho
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillRect(this.x + 8, this.y + 5, 2, 1);
+        }
+    }
+
+    class DogHouse extends Entity {
+        constructor(x, y) {
+            super(x, y, 32, 32);
+        }
+
+        update(dt, player, level) {}
+
+        render(ctx) {
+            // Casinha do Snoopy (vermelha icônica)
+            ctx.fillStyle = '#E63946';
+            ctx.fillRect(this.x + 4, this.y + 12, 24, 16);
+            
+            // Teto
+            ctx.fillStyle = '#C41E3A';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 16, this.y + 4);
+            ctx.lineTo(this.x + 4, this.y + 12);
+            ctx.lineTo(this.x + 28, this.y + 12);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Entrada
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(this.x + 16, this.y + 20, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    class Kite extends Entity {
+        constructor(x, y) {
+            super(x, y, 20, 24);
+            this.swayOffset = 0;
+        }
+
+        update(dt, player, level) {
+            this.swayOffset += dt * 2;
+            this.x += Math.sin(this.swayOffset) * 0.5;
+        }
+
+        render(ctx) {
+            // Pipa (referência ao Charlie Brown tentando soltar pipa)
+            ctx.fillStyle = '#FF69B4';
+            
+            // Diamante
+            ctx.beginPath();
+            ctx.moveTo(this.x + 10, this.y);
+            ctx.lineTo(this.x + 20, this.y + 10);
+            ctx.lineTo(this.x + 10, this.y + 20);
+            ctx.lineTo(this.x, this.y + 10);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Cruz
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(this.x + 9, this.y + 5, 2, 10);
+            ctx.fillRect(this.x + 5, this.y + 9, 10, 2);
+            
+            // Linha da pipa
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 10, this.y + 20);
+            ctx.lineTo(this.x + 10, this.y + 30);
+            ctx.stroke();
+        }
+    }
+
+    class Piano extends Entity {
+        constructor(x, y) {
+            super(x, y, 28, 20);
+        }
+
+        update(dt, player, level) {}
+
+        render(ctx) {
+            // Piano do Schroeder
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(this.x, this.y + 8, 28, 12);
+            
+            // Teclas
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 7; i++) {
+                ctx.fillRect(this.x + 2 + i * 3, this.y + 10, 2, 8);
+            }
+            
+            // Teclas pretas
+            ctx.fillStyle = '#000000';
+            for (let i = 0; i < 5; i++) {
+                if (i !== 2) {
+                    ctx.fillRect(this.x + 3 + i * 3, this.y + 10, 1, 5);
+                }
+            }
+        }
+    }
+
+    class SecurityBlanket extends Entity {
+        constructor(x, y) {
+            super(x, y, 24, 24);
+            this.floatOffset = 0;
+        }
+
+        update(dt, player, level) {
+            this.floatOffset += dt * 2;
+            this.y += Math.sin(this.floatOffset) * 0.5;
+        }
+
+        render(ctx) {
+            // Cobertor do Linus
+            ctx.fillStyle = '#FF8C42';
+            ctx.fillRect(this.x, this.y, 24, 20);
+            
+            // Listras
+            ctx.fillStyle = '#FFB366';
+            for (let i = 0; i < 4; i++) {
+                ctx.fillRect(this.x, this.y + i * 5, 24, 2);
+            }
+            
+            // Brilho mágico (power-up especial)
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x - 2, this.y - 2, 28, 24);
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE PARTÍCULAS
+    // ============================================================================
+    
+    class Particle {
+        constructor() {
+            this.x = 0;
+            this.y = 0;
+            this.velocityX = 0;
+            this.velocityY = 0;
+            this.life = 0;
+            this.maxLife = 1;
+            this.color = '#FFFFFF';
+            this.size = 4;
+        }
+
+        init(x, y, vx, vy, color, life) {
+            this.x = x;
+            this.y = y;
+            this.velocityX = vx;
+            this.velocityY = vy;
+            this.color = color;
+            this.life = life;
+            this.maxLife = life;
+            this.size = 3 + Math.random() * 3;
+        }
+
+        update(dt) {
+            this.x += this.velocityX;
+            this.y += this.velocityY;
+            this.velocityY += 0.2; // Gravidade
+            this.life -= dt;
+        }
+
+        isDead() {
+            return this.life <= 0;
+        }
+
+        render(ctx) {
+            const alpha = this.life / this.maxLife;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = this.color;
+            ctx.fillRect(
+                Math.floor(this.x - this.size / 2),
+                Math.floor(this.y - this.size / 2),
+                this.size,
+                this.size
+            );
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE ANIMAÇÃO
+    // ============================================================================
+    
+    class AnimationSystem {
+        constructor() {
+            this.animations = new Map();
+        }
+
+        registerAnimation(name, frames, frameTime) {
+            this.animations.set(name, {
+                frames: frames,
+                frameTime: frameTime,
+                totalFrames: frames.length
+            });
+        }
+
+        getFrame(name, currentTime) {
+            const anim = this.animations.get(name);
+            if (!anim) return 0;
+            
+            const frameIndex = Math.floor(currentTime / anim.frameTime) % anim.totalFrames;
+            return anim.frames[frameIndex];
+        }
+    }
+
+    // ============================================================================
+    // SISTEMA DE ÁUDIO (PREPARADO PARA INTEGRAÇÃO)
+    // ============================================================================
+    
+    class AudioManager {
+        constructor() {
+            this.sounds = new Map();
+            this.music = null;
+            this.muted = false;
+        }
+
+        loadSound(name, url) {
+            // Implementar quando adicionar arquivos de áudio
+        }
+
+        playSound(name) {
+            if (this.muted) return;
+            // Implementar reprodução de som
+            console.log(`Playing sound: ${name}`);
+        }
+
+        playMusic(name) {
+            if (this.muted) return;
+            // Implementar música de fundo
+        }
+
+        stopMusic() {
+            // Implementar parada de música
+        }
+
+        toggleMute() {
+            this.muted = !this.muted;
+        }
+    }
+
+    // ============================================================================
+    // GERENCIADOR DE INPUT (TECLADO + TOUCH)
+    // ============================================================================
+    
+    class InputManager {
+        constructor() {
+            this.keys = {};
+            this.left = false;
+            this.right = false;
+            this.jump = false;
+            this.run = false;
+            
+            // Touch controls
+            this.joystickActive = false;
+            this.joystickStartX = 0;
+            this.joystickStartY = 0;
+            this.joystickCurrentX = 0;
+            this.joystickCurrentY = 0;
+            
+            this.setupKeyboard();
+            this.setupTouch();
+        }
+
+        setupKeyboard() {
+            window.addEventListener('keydown', (e) => {
+                this.keys[e.code] = true;
+                
+                if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.left = true;
+                if (e.code === 'ArrowRight' || e.code === 'KeyD') this.right = true;
+                if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') this.jump = true;
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.run = true;
+                
+                // Prevenir scroll
+                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                this.keys[e.code] = false;
+                
+                if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.left = false;
+                if (e.code === 'ArrowRight' || e.code === 'KeyD') this.right = false;
+                if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') this.jump = false;
+                if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.run = false;
+            });
+        }
+
+        setupTouch() {
+            const joystickContainer = document.querySelector('.joystick-container');
+            const joystickStick = document.getElementById('joystickStick');
+            const jumpButton = document.getElementById('jumpButton');
+            const runButton = document.getElementById('runButton');
+            
+            // Joystick virtual
+            const handleJoystickStart = (e) => {
+                e.preventDefault();
+                this.joystickActive = true;
+                const rect = joystickContainer.getBoundingClientRect();
+                this.joystickStartX = rect.left + rect.width / 2;
+                this.joystickStartY = rect.top + rect.height / 2;
+            };
+
+            const handleJoystickMove = (e) => {
+                if (!this.joystickActive) return;
+                e.preventDefault();
+                
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - this.joystickStartX;
+                const deltaY = touch.clientY - this.joystickStartY;
+                
+                // Limitar ao raio do joystick
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = 40;
+                
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    this.joystickCurrentX = Math.cos(angle) * maxDistance;
+                    this.joystickCurrentY = Math.sin(angle) * maxDistance;
+                } else {
+                    this.joystickCurrentX = deltaX;
+                    this.joystickCurrentY = deltaY;
+                }
+                
+                // Atualizar visual do stick
+                joystickStick.style.transform = `translate(-50%, -50%) translate(${this.joystickCurrentX}px, ${this.joystickCurrentY}px)`;
+                
+                // Atualizar inputs
+                if (Math.abs(this.joystickCurrentX) > 10) {
+                    this.left = this.joystickCurrentX < 0;
+                    this.right = this.joystickCurrentX > 0;
+                } else {
+                    this.left = false;
+                    this.right = false;
+                }
+            };
+
+            const handleJoystickEnd = (e) => {
+                e.preventDefault();
+                this.joystickActive = false;
+                this.joystickCurrentX = 0;
+                this.joystickCurrentY = 0;
+                this.left = false;
+                this.right = false;
+                joystickStick.style.transform = 'translate(-50%, -50%)';
+            };
+
+            joystickContainer.addEventListener('touchstart', handleJoystickStart);
+            joystickContainer.addEventListener('touchmove', handleJoystickMove);
+            joystickContainer.addEventListener('touchend', handleJoystickEnd);
+            
+            // Botões de ação
+            jumpButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.jump = true;
+            });
+            
+            jumpButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.jump = false;
+            });
+            
+            runButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.run = true;
+            });
+            
+            runButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.run = false;
+            });
+        }
+
+        update() {
+            // Atualizar estados de input
+        }
+    }
+
+    // ============================================================================
+    // INICIALIZAÇÃO DO JOGO
+    // ============================================================================
+    
+    // Criar instância global do jogo
+    let game;
+
+    window.addEventListener('load', () => {
+        game = new Game();
+    });
+
+    // Prevenir zoom no mobile
+    document.addEventListener('gesturestart', (e) => {
+        e.preventDefault();
+    });
+
+    // Prevenir comportamento padrão de toque
+    document.addEventListener('touchmove', (e) => {
+        if (e.target.id === 'gameCanvas') {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    </script>
+</body>
+</html>
+            
+         
+         
