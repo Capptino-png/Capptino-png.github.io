@@ -1,66 +1,777 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
-    <title>Snoopy's Adventure - The Peanuts Platform Game</title>
-    <style>
-        /* ========================================================================
-           RESET E CONFIGURAÇÕES GLOBAIS
-        ======================================================================== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Para Kailini — do Bobo, com amor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        @font-face {
-            font-family: 'ComicSans';
-            src: local('Comic Sans MS'), local('ComicSansMS'), local('Comic Sans');
-        }
+  :root {
+    --rose: #f2a7bb;
+    --rose-deep: #e07898;
+    --rose-pale: #fce8ef;
+    --cream: #fdf6f0;
+    --ink: #1a0a10;
+    --ink-light: #4a2535;
+    --gold: #c9956a;
+    --white: #fffaf8;
+    --tim: #0d0509;
+  }
 
-        :root {
-            /* Paleta Peanuts - Cores clássicas do Charlie Brown e turma */
-            --peanuts-yellow: #FFD700;
-            --charlie-brown-yellow: #FDD017;
-            --snoopy-white: #FFFFFF;
-            --snoopy-black: #000000;
-            --woodstock-yellow: #FFEB3B;
-            --lucy-blue: #4A90E2;
-            --linus-orange: #FF8C42;
-            --peppermint-red: #E63946;
-            --sally-pink: #FFB6C1;
-            --schroeder-purple: #9B59B6;
-            --pigpen-brown: #8B4513;
-            --sky-blue: #87CEEB;
-            --grass-green: #7EC850;
-            --cloud-white: #F0F8FF;
-            --dirt-brown: #8B7355;
-        }
+  html { scroll-behavior: smooth; }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: linear-gradient(180deg, var(--sky-blue) 0%, #B0E0E6 100%);
-            font-family: 'ComicSans', 'Comic Sans MS', cursive, sans-serif;
-            touch-action: none;
-        }
+  body {
+    background: var(--tim);
+    color: var(--white);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow-x: hidden;
+    /* cursor default on mobile */
+  }
 
-        /* ========================================================================
-           CONTAINER PRINCIPAL DO JOGO
-        ======================================================================== */
-        #gameContainer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+  /* Hide cursor on touch devices */
+  @media (pointer: fine) {
+    body { cursor: none; }
+    .cursor, .cursor-ring { display: block; }
+  }
+  @media (pointer: coarse) {
+    .cursor, .cursor-ring { display: none; }
+  }
+
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--rose);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.15s;
+    transform: translate(-50%, -50%);
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(242,167,187,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.35s ease;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ===== HERO ===== */
+  #hero {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--tim);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 60%, #2a0818 0%, #0d0509 70%);
+  }
+
+  /* Grain texture */
+  .grain {
+    position: fixed; inset: -50%;
+    width: 200%; height: 200%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+    animation: grain-shift 8s steps(10) infinite;
+  }
+  @keyframes grain-shift {
+    0%,100%{transform:translate(0,0)} 10%{transform:translate(-2%,-3%)} 20%{transform:translate(1%,2%)} 30%{transform:translate(-3%,1%)} 40%{transform:translate(2%,-1%)} 50%{transform:translate(-1%,3%)} 60%{transform:translate(3%,-2%)} 70%{transform:translate(-2%,1%)} 80%{transform:translate(1%,-3%)} 90%{transform:translate(-1%,2%)}
+  }
+
+  /* Floating petals */
+  .petal {
+    position: absolute;
+    font-size: 1.2rem;
+    opacity: 0;
+    animation: petal-fall linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  @keyframes petal-fall {
+    0% { transform: translateY(-40px) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.55rem, 2.5vw, 0.7rem);
+    letter-spacing: 0.2em;
+    color: var(--rose);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fade-up 1s ease 0.5s forwards;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 2;
+    padding: 0 1rem;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(3.2rem, 16vw, 9rem);
+    font-weight: 700;
+    line-height: 0.92;
+    text-align: center;
+    color: var(--white);
+    opacity: 0;
+    animation: fade-up 1.2s ease 0.8s forwards;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-title .name-highlight {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--rose);
+    display: block;
+    font-style: italic;
+  }
+
+  .hero-title .name-solid {
+    display: block;
+  }
+
+  .hero-subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    color: rgba(242,167,187,0.7);
+    margin-top: 1.5rem;
+    opacity: 0;
+    animation: fade-up 1s ease 1.2s forwards;
+    letter-spacing: 0.05em;
+    position: relative;
+    z-index: 2;
+    padding: 0 1rem;
+  }
+
+  .hero-date {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.55rem, 2.5vw, 0.65rem);
+    letter-spacing: 0.2em;
+    color: rgba(255,250,248,0.3);
+    margin-top: 2rem;
+    opacity: 0;
+    animation: fade-up 1s ease 1.6s forwards;
+    position: relative;
+    z-index: 2;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    animation: fade-up 1s ease 2s forwards;
+    z-index: 2;
+  }
+  .scroll-hint span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: rgba(255,250,248,0.3);
+    text-transform: uppercase;
+  }
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--rose-deep), transparent);
+    animation: scroll-line 2s ease-in-out infinite;
+  }
+  @keyframes scroll-line {
+    0%,100%{opacity:0.3; transform:scaleY(1)} 50%{opacity:1; transform:scaleY(1.3)}
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== SECTIONS SHARED ===== */
+  section {
+    padding: clamp(4rem, 10vw, 8rem) clamp(1.25rem, 5vw, 2rem);
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.3em;
+    color: var(--rose-deep);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: var(--rose-deep);
+    flex-shrink: 0;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 7vw, 3.5rem);
+    font-weight: 400;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+    color: var(--white);
+  }
+
+  h2 em {
+    font-style: italic;
+    color: var(--rose);
+  }
+
+  p.body {
+    font-size: clamp(1rem, 3.5vw, 1.25rem);
+    line-height: 1.9;
+    color: rgba(255,250,248,0.7);
+    font-weight: 300;
+  }
+
+  /* divider */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(242,167,187,0.2), transparent);
+    margin: 0 auto;
+  }
+
+  /* ===== COUNTER ===== */
+  #counter-section {
+    text-align: center;
+    padding: clamp(4rem, 10vw, 6rem) 1.5rem;
+    background: radial-gradient(ellipse 80% 40% at 50% 50%, #2a0818 0%, transparent 70%);
+  }
+
+  .counter-grid {
+    display: flex;
+    justify-content: center;
+    gap: clamp(1.5rem, 5vw, 5rem);
+    flex-wrap: wrap;
+    margin-top: 2.5rem;
+  }
+
+  .counter-item { text-align: center; }
+
+  .counter-number {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 12vw, 5.5rem);
+    font-weight: 700;
+    color: var(--rose);
+    line-height: 1;
+    display: block;
+  }
+
+  .counter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.5rem, 2vw, 0.6rem);
+    letter-spacing: 0.2em;
+    color: rgba(255,250,248,0.35);
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+    display: block;
+  }
+
+  /* ===== CAFEZYTX ===== */
+  #cafezito {
+    text-align: center;
+  }
+
+  .cafezito-visual {
+    margin: 2.5rem auto;
+    font-size: clamp(3.5rem, 12vw, 5rem);
+    position: relative;
+    display: inline-block;
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)}
+  }
+
+  .cafezito-steam {
+    position: absolute;
+    top: -1rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.5rem;
+  }
+  .steam-line {
+    width: 2px;
+    height: 18px;
+    background: linear-gradient(to top, var(--rose), transparent);
+    border-radius: 99px;
+    animation: steam-rise 2s ease-in-out infinite;
+  }
+  .steam-line:nth-child(2){ animation-delay: 0.3s; }
+  .steam-line:nth-child(3){ animation-delay: 0.6s; }
+  @keyframes steam-rise {
+    0%{opacity:0;transform:translateY(0) scaleX(1)} 50%{opacity:0.8} 100%{opacity:0;transform:translateY(-20px) scaleX(1.5)}
+  }
+
+  .promise-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(242,167,187,0.08);
+    border: 1px solid rgba(242,167,187,0.15);
+    border-radius: 99px;
+    padding: 0.4rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.55rem, 2.5vw, 0.65rem);
+    letter-spacing: 0.15em;
+    color: var(--rose);
+    margin: 0.25rem;
+  }
+
+  /* ===== PINKY SWEAR ===== */
+  #pinky {
+    text-align: center;
+  }
+
+  .pinky-visual {
+    margin: 2.5rem auto;
+    font-size: clamp(2.5rem, 10vw, 4rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .pinky-finger {
+    display: inline-block;
+    animation: pinky-swing 2s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  .pinky-finger:nth-child(3) { animation-direction: reverse; }
+
+  @keyframes pinky-swing {
+    0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)}
+  }
+
+  .pinky-promises {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    text-align: left;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .promise-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(242,167,187,0.04);
+    border-left: 2px solid rgba(242,167,187,0.2);
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .promise-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--rose-deep);
+    letter-spacing: 0.2em;
+    margin-top: 0.3rem;
+    flex-shrink: 0;
+  }
+  .promise-text {
+    font-style: italic;
+    font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+    color: rgba(255,250,248,0.75);
+    line-height: 1.6;
+  }
+
+  /* ===== SNOOPY ===== */
+  #snoopy {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  @media(min-width: 640px) {
+    #snoopy { grid-template-columns: 1fr 1fr; gap: 4rem; }
+  }
+
+  .snoopy-art {
+    font-size: clamp(0.55rem, 2vw, 0.7rem);
+    font-family: 'DM Mono', monospace;
+    color: var(--rose);
+    line-height: 1.25;
+    opacity: 0.8;
+    white-space: pre;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  /* ===== BOUQUET ===== */
+  #bouquet {
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .bouquet-container {
+    position: relative;
+    height: clamp(220px, 50vw, 320px);
+    margin: 2.5rem auto;
+    max-width: 400px;
+  }
+
+  .flower {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: sway 3s ease-in-out infinite;
+  }
+
+  @keyframes sway {
+    0%,100%{transform:rotate(0deg)} 50%{transform:rotate(2deg)}
+  }
+
+  .flower-head {
+    position: relative;
+    width: 60px; height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .petal-svg { position: absolute; }
+  .center-circle {
+    width: 18px; height: 18px;
+    background: #f5c842;
+    border-radius: 50%;
+    z-index: 2;
+    position: relative;
+  }
+
+  .stem {
+    width: 2px;
+    background: linear-gradient(to bottom, #4a7a3a, #2d5a20);
+    border-radius: 99px;
+  }
+
+  .leaf {
+    position: absolute;
+    width: 18px; height: 9px;
+    background: #4a7a3a;
+    border-radius: 50% 50% 50% 0;
+    transform-origin: left center;
+  }
+
+  /* ===== TAGS ===== */
+  #for-you { text-align: center; }
+
+  .tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 2rem;
+  }
+
+  .tag {
+    padding: 0.45rem 1rem;
+    border: 1px solid rgba(242,167,187,0.2);
+    border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.55rem, 2.2vw, 0.65rem);
+    letter-spacing: 0.12em;
+    color: rgba(255,250,248,0.5);
+    transition: all 0.3s;
+    cursor: default;
+  }
+  .tag:hover, .tag:active {
+    border-color: var(--rose);
+    color: var(--rose);
+    background: rgba(242,167,187,0.05);
+  }
+  .tag.featured {
+    border-color: var(--rose-deep);
+    color: var(--rose);
+    background: rgba(242,167,187,0.05);
+  }
+
+  /* ===== LOVE ME NOT ===== */
+  #love-me-not {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: clamp(4rem, 10vw, 8rem) clamp(1.25rem, 5vw, 2rem);
+  }
+
+  .daisy-game {
+    margin: 2.5rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .daisy-single {
+    font-size: clamp(3.5rem, 14vw, 5rem);
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .petal-answers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .petal-line {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(1rem, 4vw, 1.1rem);
+    color: rgba(255,250,248,0.4);
+    transition: color 0.3s, font-size 0.3s;
+    cursor: default;
+    padding: 0.15rem 0;
+  }
+  .petal-line.active {
+    color: var(--rose);
+    font-size: clamp(1.1rem, 4.5vw, 1.3rem);
+    font-weight: 400;
+  }
+  .petal-line.crossed {
+    text-decoration: line-through;
+    color: rgba(255,250,248,0.15);
+  }
+
+  /* ===== LETTER ===== */
+  #letter {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: clamp(4rem, 10vw, 8rem) clamp(1.25rem, 5vw, 2rem);
+  }
+
+  .letter-paper {
+    background: rgba(242,167,187,0.04);
+    border: 1px solid rgba(242,167,187,0.12);
+    padding: clamp(1.5rem, 6vw, 3rem) clamp(1.25rem, 6vw, 4rem);
+    position: relative;
+  }
+
+  .letter-paper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: clamp(2rem, 8vw, 3rem);
+    width: 1px; height: 100%;
+    background: rgba(242,167,187,0.06);
+  }
+
+  .letter-dear {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(1.3rem, 5vw, 1.5rem);
+    color: var(--rose);
+    margin-bottom: 1.5rem;
+  }
+
+  .letter-body {
+    font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+    line-height: 2;
+    color: rgba(255,250,248,0.75);
+    font-weight: 300;
+  }
+  .letter-body p { margin-bottom: 1.25rem; }
+
+  .letter-sign {
+    margin-top: 2rem;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(1.1rem, 4vw, 1.3rem);
+    color: var(--rose);
+    text-align: right;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 3rem 1.5rem 5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: rgba(255,250,248,0.15);
+    text-transform: uppercase;
+  }
+
+  footer .heart {
+    color: var(--rose);
+    font-size: 0.8rem;
+    display: block;
+    margin-bottom: 1rem;
+    animation: heartbeat 1.5s ease-in-out infinite;
+  }
+
+  @keyframes heartbeat {
+    0%,100%{transform:scale(1)} 14%{transform:scale(1.3)} 28%{transform:scale(1)} 42%{transform:scale(1.2)} 70%{transform:scale(1)}
+  }
+
+  /* ===== REVEAL ===== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Vignette */
+  .vignette {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  /* ===== MOBILE TWEAKS ===== */
+  @media (max-width: 480px) {
+    .hero-eyebrow { letter-spacing: 0.12em; }
+    .counter-grid { gap: 2rem; }
+    .bouquet-container { height: 200px; }
+    .snoopy-art { font-size: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div>
+
+  <div class="petal" style="left:10%; animation-duration:8s; animation-delay:0s; font-size:1rem;">🌼</div>
+  <div class="petal" style="left:25%; animation-duration:11s; animation-delay:2s;">🌼</div>
+  <div class="petal" style="left:50%; animation-duration:9s; animation-delay:1s; font-size:0.8rem;">🌸</div>
+  <div class="petal" style="left:70%; animation-duration:13s; animation-delay:3s;">🌼</div>
+  <div class="petal" style="left:85%; animation-duration:7s; animation-delay:0.5s; font-size:0.9rem;">🌸</div>
+
+  <p class="hero-eyebrow">uma página só sua — de moreno para lili</p>
+
+  <h1 class="hero-title">
+    <span class="name-solid">Kailini,</span>
+    <span class="name-highlight">eu te amo.</span>
+  </h1>
+
+  <p class="hero-subtitle">e isso não precisa de declaração —<br>mas merece uma.</p>
+
+  <p class="hero-date">21 · 08 · 2025 — o dia em que tudo começou</p>
+
+  <div class="scroll-hint">
+    <span>continue</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTADOR -->
+<div id="counter-section">
+  <p class="section-label" style="justify-content:center;">desde o começo</p>
+  <div class="counter-grid">
+    <div class="counter-item">
+      <span class="counter-number" id="cnt-days">—</span>
+      <span class="counter-label">dias te conhecendo</span>
+    </div>
+    <div class="counter-item">
+      <span class="counter-number" id="cnt-decl">—</span>
+      <span class="counter-label">dias desde a declaração</span>
+    </div>
+    <div class="counter-item">
+      <span class="counter-number">∞</span>
+      <span class="counter-label">cafezytos com saudade</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CAFEZITO -->
+<section id="cafezito" class="reveal">
+  <p class="section-label" style="justify-content:center;">nossa língua secreta</p>
+  <h2>Quando as palavras<br>são pequenas demais,<br><em>a gente é cafezytx.</em></h2>
+
+  <div class="cafezito-visual">
+    ☕
+    <div class="cafezito-steam">
+      <div class="steam-line"></div>
+      <div class="steam-line"></div>
+      <div class="steam-line"></div>
+    </div>
+  </div>
+
+  <p class="body">Existe uma magia em ter uma palavra só sua. Quando o mundo inteiro não sabe o que você sente, você me manda um "cafezytx" — e eu entendo tudo. A saudade, o carinho, o querer estar perto. É o nosso idioma particular, e eu amo cada sílaba dele.</p>
+
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;margin-top:2rem;">
+    <span class="promise-tag">☕ cafezytx de manhã</span>
+    <span class="promise-tag">☕ cafezytx de madrugada</span>
+    <span class="promise-tag">☕ cafezytx quando faltam palavras</span>
+    <span class="promise-tag">☕ cafezytx que quer dizer tudo</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- LOVE ME NOT -->
+<div id="love-me-not" class="reveal">
+  <p class="section-label" style="justify-content:center;">love me not</p>
+  <h2>A gente não precisa<br>de <em>pétalas</em> para saber.</h2>
+
+  <div class="daisy-game">
+    <div class="daisy-single">🌼</div>
+    <div class="petal-answers">
+      <div class="petal-line crossed">ela me ama...</div>
+      <div class="petal-line crossed">ela não me ama...</div>
+      <div class="petal-line crossed">ela me ama...</div>
+      <div class="petal-line crossed">ela não me ama...</div>
+      <div class="petal-line crossed">ela me ama...</div>
+      <div class="petal-line crossed">ela não me ama...</div>
+      <div class="petal-line active">ela me ama. 🌸</div>
+    </div>
+  </div>
+
+  <p class="body" style="m            height: 100vh;
             display: flex;
             flex-direction: column;
             background: var(--sky-blue);
